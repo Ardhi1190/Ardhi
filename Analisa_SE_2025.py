@@ -8,6 +8,9 @@ from io import StringIO
 # Atur layout fullscreen
 st.set_page_config(layout="wide")
 
+# Tambahkan Judul Dashboard
+st.title("📊 Dashboard Analisis Item Survey Employee Happiness & Engagement")
+
 # URL Google Sheets dalam format CSV
 sheet_url = "https://docs.google.com/spreadsheets/d/1V_wGUbLyDn6Uo5_EyFeLRp4AgZiYB72csQQJJEg5Yn8/export?format=csv"
 
@@ -197,49 +200,18 @@ if df is not None:
             st.write("### 🔍 Validitas Employee Engagement")
             st.dataframe(engagement_validity.to_frame(name="Korelasi dengan Total Engagement"))
 
-        ### **3️⃣ Kesimpulan Uji Validitas**
+        ### **3️⃣ Kesimpulan Uji Validitas (Di Luar Layout Kolom)**
         st.write("### 📌 Kesimpulan Uji Validitas")
 
         def interpret_validity(correlation, label):
-            valid_items = correlation[correlation >= 0.3].index.tolist()
-            invalid_items = correlation[correlation < 0.3].index.tolist()
-
-            result = f"**{label}:**\n"
-            result += f"✅ **Valid**: {len(valid_items)} item\n"
-            result += f"❌ **Tidak Valid**: {len(invalid_items)} item\n"
-
-            if invalid_items:
-                result += f"🛠 **Item tidak valid**: {', '.join(invalid_items)}\n"
-                result += "   - Item ini memiliki korelasi rendah (< 0.3), sehingga perlu ditinjau ulang atau diperbaiki.\n"
-            return result
+            invalid_questions = correlation[correlation < 0.3].index.tolist()
+            if invalid_questions:
+                return f"❌ Beberapa item dalam {label} tidak valid: {', '.join(invalid_questions)}"
+            else:
+                return f"✅ Semua item dalam {label} valid."
 
         st.write(interpret_validity(happiness_validity, "Employee Happiness"))
         st.write(interpret_validity(engagement_validity, "Employee Engagement"))
-
-        ### **4️⃣ Kesimpulan Keseluruhan**
-        st.write("### 📌 Kesimpulan Keseluruhan Uji Validitas")
-
-        # Hitung jumlah total valid dan tidak valid
-        total_valid_happiness = (happiness_validity >= 0.3).sum()
-        total_invalid_happiness = (happiness_validity < 0.3).sum()
-        total_valid_engagement = (engagement_validity >= 0.3).sum()
-        total_invalid_engagement = (engagement_validity < 0.3).sum()
-
-        total_valid = total_valid_happiness + total_valid_engagement
-        total_invalid = total_invalid_happiness + total_invalid_engagement
-        total_questions = total_valid + total_invalid
-
-        st.write(f"🔍 **Dari total {total_questions} item dalam survei:**")
-        st.write(f"✅ **{total_valid} item valid** (memiliki korelasi ≥ 0.3)")
-        st.write(f"❌ **{total_invalid} item tidak valid** (memiliki korelasi < 0.3)")
-
-        if total_invalid > 0:
-            st.warning("⚠️ Beberapa item dalam survei tidak valid. Rekomendasi:")
-            st.write("- **Tinjau ulang pertanyaan dengan korelasi rendah** (< 0.3).")
-            st.write("- **Perbaiki atau gantikan pertanyaan yang kurang relevan**.")
-            st.write("- **Lakukan uji coba ulang setelah revisi** untuk memastikan validitas yang lebih baik.")
-        else:
-            st.success("🎉 Semua item dalam survei valid! Tidak perlu perbaikan.")
 
     else:
         st.warning("Tidak cukup data untuk melakukan uji validitas.")
