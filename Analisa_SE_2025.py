@@ -17,6 +17,7 @@ if st.button("🔄 Perbarui Data"):
     st.cache_data.clear()
     st.rerun()
 @st.cache_data(ttl=30)  # Cache berlaku selama 30 Detik
+
 def load_google_sheets(url):
     response = requests.get(url, verify=False)  # Hapus verify=False untuk keamanan
     if response.status_code == 200:
@@ -103,6 +104,7 @@ if df is not None:
 
             # Grafik Employee Happiness (Horizontal Bar Chart)
             st.subheader("Employee Happiness")
+            st.subheader("(Skala 1 s.d 4)")
 
             # Hitung rata-rata keseluruhan Employee Happiness
             overall_avg_happiness = avg_happiness.mean().round(2)
@@ -177,7 +179,7 @@ if df is not None:
             
     st.write("### 📊 Uji Validitas Employee Happiness & Engagement")
     st.write("### (Standard Nilai >= 0.3 = Valid)")
-    
+
 if df is not None:
     if not df_filtered.empty:
         # Ambil kolom Employee Happiness & Employee Engagement
@@ -218,7 +220,7 @@ if df is not None:
 
     else:
         st.warning("Tidak cukup data untuk melakukan uji validitas.")
-        
+
     st.write("### 🔥 Korelasi Rata-rata Nilai Employee Happiness & Employee Engagement")
 
 if df is not None:
@@ -272,9 +274,7 @@ if df is not None:
     else:
         st.warning("Tidak cukup data untuk menghitung korelasi.")
 
-        
-
-     st.write("### 🔥 Korelasi antara Employee Happiness & Employee Engagement")
+    st.write("### 🔥 Korelasi antara Employee Happiness & Employee Engagement")
 if df is not None:
     if not df.empty:
         # Ambil kolom Employee Happiness & Employee Engagement
