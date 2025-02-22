@@ -13,7 +13,7 @@ st.title("📊 Dashboard Analisis Item Survey Employee Happiness & Engagement")
 
 # URL Google Sheets dalam format CSV
 sheet_url = "https://docs.google.com/spreadsheets/d/1V_wGUbLyDn6Uo5_EyFeLRp4AgZiYB72csQQJJEg5Yn8/export?format=csv"
-
+@st.cache_data(ttl=30)  # Cache berlaku selama 30 Detik
 def load_google_sheets(url):
     response = requests.get(url, verify=False)  # Hapus verify=False untuk keamanan
     if response.status_code == 200:
