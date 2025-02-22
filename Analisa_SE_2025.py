@@ -176,7 +176,7 @@ if df is not None:
 
             
     st.write("### 📊 Uji Validitas Employee Happiness & Engagement")
-
+    st.write("### (Standard Nilai >= 0.3 = Valid)")
 if df is not None:
     if not df_filtered.empty:
         # Ambil kolom Employee Happiness & Employee Engagement
