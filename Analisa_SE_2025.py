@@ -275,95 +275,84 @@ if df is not None:
         st.warning("Tidak cukup data untuk menghitung korelasi.")
 
     st.write("### 🔥 Korelasi antara Employee Happiness & Employee Engagement")
+    
 if df is not None:
-    if not df.empty:
+    if not df_filtered.empty:
         # Ambil kolom Employee Happiness & Employee Engagement
         happiness_columns = df.columns[6:22]  # Employee Happiness
         engagement_columns = df.columns[22:44]  # Employee Engagement
 
         # Hitung korelasi Spearman secara manual tanpa scipy
-        df_filtered = df[happiness_columns.tolist() + engagement_columns.tolist()].dropna()
         rank_df = df_filtered.rank(method="average")  # Ranking untuk korelasi Spearman
         happiness_engagement_corr = rank_df.corr(method="pearson").loc[happiness_columns, engagement_columns]
 
-        # Menampilkan heatmap korelasi
+         # **HEATMAP KORELASI**
         fig, ax = plt.subplots(figsize=(12, 8))
+
+        # Tampilkan matriks korelasi sebagai heatmap
         cax = ax.matshow(happiness_engagement_corr, cmap="coolwarm", vmin=-1, vmax=1)
         fig.colorbar(cax)
 
-        # Label sumbu
+        # Atur label sumbu
         ax.set_xticks(range(len(engagement_columns)))
         ax.set_yticks(range(len(happiness_columns)))
         ax.set_xticklabels(engagement_columns, rotation=75, fontsize=8, ha="right")
         ax.set_yticklabels(happiness_columns, fontsize=8)
 
-        # Menampilkan angka korelasi di dalam heatmap
+        # Tambahkan nilai korelasi di dalam heatmap
         for (i, j), val in np.ndenumerate(happiness_engagement_corr.values):
             color = "white" if abs(val) > 0.5 else "black"
             ax.text(j, i, f'{val:.2f}', ha='center', va='center', color=color, fontsize=7)
 
+        # Atur posisi label sumbu x agar di bawah heatmap
         ax.xaxis.set_ticks_position("bottom")
         ax.xaxis.set_label_position("bottom")
 
-        st.pyplot(fig)
+        ax.set_title("Heatmap Korelasi Employee Happiness & Employee Engagement", fontsize=12)
 
-        # Menampilkan daftar korelasi tertinggi dan terendah
+        st.pyplot(fig)  # **Tampilkan heatmap di Streamlit**
+
+        # **MENCARI KORELASI POSITIF KUAT TANPA PENGULANGAN**
         correlation_pairs = happiness_engagement_corr.unstack().reset_index()
-        correlation_pairs.columns = ["Employee Happiness", "Employee Engagement", "Correlation"]
-        correlation_pairs = correlation_pairs.sort_values("Correlation", ascending=False)
 
-        # Hitung jumlah item berdasarkan kategori korelasi
+        # Tukar urutan kolom agar sesuai dengan matriks korelasi
+        correlation_pairs.columns = ["Employee Engagement", "Employee Happiness", "Correlation"]
+
+        # Urutkan dari korelasi tertinggi
+        correlation_pairs = correlation_pairs.sort_values("Correlation", ascending=False).reset_index(drop=True)
+
+        # Klasifikasi korelasi (hanya yang positif kuat)
+        strong_positive_correlation = correlation_pairs[correlation_pairs["Correlation"] > 0.7]
+
+        # Hilangkan duplikasi Employee Happiness, simpan hanya korelasi tertinggi per item
+        unique_strong_positive = strong_positive_correlation.drop_duplicates(subset=["Employee Happiness"], keep="first")
+
+        # Hitung jumlah unik Employee Happiness yang memiliki korelasi positif kuat
+        unique_happiness_strong_positive = unique_strong_positive["Employee Happiness"].nunique()
+
+        # Hitung ulang persentase hanya untuk korelasi positif kuat
         total_happiness_items = len(happiness_columns)
+        strong_positive_percentage = (unique_happiness_strong_positive / total_happiness_items) * 100 if total_happiness_items > 0 else 0
 
-        # Korelasi kuat (r > 0.7 atau r < -0.7)
-        strong_correlation = correlation_pairs[(correlation_pairs["Correlation"] > 0.7) | (correlation_pairs["Correlation"] < -0.7)]
-        strong_count = strong_correlation["Employee Happiness"].nunique()
-
-        # Korelasi sedang (0.5 < r ≤ 0.7 atau -0.7 ≤ r < -0.5)
-        moderate_correlation = correlation_pairs[((correlation_pairs["Correlation"] > 0.5) & (correlation_pairs["Correlation"] <= 0.7)) |
-                                                 ((correlation_pairs["Correlation"] < -0.5) & (correlation_pairs["Correlation"] >= -0.7))]
-        moderate_count = moderate_correlation["Employee Happiness"].nunique()
-
-        if not strong_correlation.empty or not moderate_correlation.empty:
-            st.write("### 📌 Daftar Item dengan Korelasi Signifikan")
-
-            if not strong_correlation.empty:
-                st.write("#### 🔴 Korelasi Kuat (|r| > 0.7)")
-                st.dataframe(strong_correlation)
-                st.write(f"📊 **Total {strong_count} item Employee Happiness memiliki korelasi kuat terhadap Employee Engagement**.")
-
-            if not moderate_correlation.empty:
-                st.write("#### 🟠 Korelasi Sedang (0.5 < |r| ≤ 0.7)")
-                st.dataframe(moderate_correlation)
-                st.write(f"📊 **Total {moderate_count} item Employee Happiness memiliki korelasi sedang terhadap Employee Engagement**.")
-
+        # **Menampilkan daftar korelasi positif kuat tanpa pengulangan**
+        st.write("### 📌 Daftar Item dengan Korelasi Positif Kuat (Tanpa Pengulangan)")
+        if not unique_strong_positive.empty:
+            st.write(f"#### 🔴 Korelasi Positif Kuat (r > 0.7) - **{unique_happiness_strong_positive} item**")
+            st.dataframe(unique_strong_positive[["Employee Happiness", "Employee Engagement", "Correlation"]])  
         else:
-            st.write("ℹ️ **Tidak ada korelasi signifikan** antara Employee Happiness & Employee Engagement.")
+            st.write("ℹ️ **Tidak ada korelasi positif kuat antara Employee Happiness & Employee Engagement.**")
 
-        # **Kesimpulan Otomatis**
-        strong_percentage = (strong_count / total_happiness_items) * 100
-        moderate_percentage = (moderate_count / total_happiness_items) * 100
-        total_percentage = strong_percentage + moderate_percentage
-
+        # **Perhitungan ulang tampilan Latex**
         st.write("## 📊 Perhitungan")
-
         st.latex(r"""
-        \text{Persentase Korelasi Kuat} = \left(\frac{%d}{%d}\right) \times 100\%% = %.2f\%%
-        """ % (strong_count, total_happiness_items, strong_percentage))
+        \text{Persentase Korelasi Positif Kuat} = \left(\frac{%d}{%d}\right) \times 100\%% = %.2f\%%
+        """ % (unique_happiness_strong_positive, total_happiness_items, strong_positive_percentage))
 
-        st.latex(r"""
-        \text{Persentase Korelasi Sedang} = \left(\frac{%d}{%d}\right) \times 100\%% = %.2f\%%
-        """ % (moderate_count, total_happiness_items, moderate_percentage))
-
-        st.latex(r"""
-        \text{Total Persentase Korelasi} = %.2f\%% + %.2f\%% = %.2f\%%
-        """ % (strong_percentage, moderate_percentage, total_percentage))
-
-        # Kesimpulan
+        # **Kesimpulan hanya untuk korelasi positif kuat**
         st.write("## 📊 Kesimpulan")
-        if strong_percentage > 70:
-            st.success("✅ **Karena %.2f%% dari item Employee Happiness memiliki korelasi kuat (lebih dari 70%%), maka Employee Happiness dapat direpresentasikan oleh Employee Engagement. 🚀**" % strong_percentage)
-        elif strong_percentage + moderate_percentage > 50:
+        if strong_positive_percentage > 70:
+            st.success("✅ **Karena %.2f%% dari item Employee Happiness memiliki korelasi positif kuat (lebih dari 70%%), maka Employee Happiness dapat direpresentasikan oleh Employee Engagement. 🚀**" % strong_positive_percentage)
+        elif strong_positive_percentage > 50:
             st.warning("⚠️ **Sebagian item Employee Happiness dapat direpresentasikan oleh Employee Engagement, tetapi tidak semuanya.**")
         else:
             st.error("❌ **Employee Happiness tidak dapat sepenuhnya diwakili oleh Employee Engagement.**")
