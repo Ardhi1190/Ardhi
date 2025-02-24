@@ -421,12 +421,21 @@ if df is not None:
         correlation_value = spearman_corr.iloc[0, 1]  # Korelasi antara Happiness & Engagement
 
         st.write("### 🔍 Kesimpulan dari Korelasi")
-        if correlation_value > 0.5:
-            st.write(f"✅ **Employee Happiness dan Engagement memiliki korelasi positif yang kuat (r = {correlation_value:.2f})**")
-        elif correlation_value < -0.5:
-            st.write(f"❌ **Employee Happiness dan Engagement memiliki korelasi negatif yang kuat (r = {correlation_value:.2f})**")
+        # Tentukan kategori korelasi
+        if correlation_value < 0.20:
+            correlation_category = "Sangat lemah atau tidak ada korelasi"
+        elif 0.20 <= correlation_value < 0.40:
+            correlation_category = "Lemah"
+        elif 0.40 <= correlation_value < 0.60:
+            correlation_category = "Sedang"
+        elif 0.60 <= correlation_value < 0.80:
+            correlation_category = "Kuat"
         else:
-            st.write(f"ℹ️ **Employee Happiness dan Engagement memiliki korelasi lemah (r = {correlation_value:.2f})**")
+            correlation_category = "Sangat kuat"
+
+        # Tampilkan kesimpulan kategori korelasi
+        st.write(f"**Nilai Korelasi (r) antara Employee Happiness dan Employee Engagement adalah {correlation_value:.2f}**.")
+        st.write(f"Kekuatan korelasi ini termasuk dalam kategori: **{correlation_category}**.")
 
     else:
         st.warning("Tidak cukup data untuk menghitung korelasi.")
@@ -480,7 +489,7 @@ if df is not None:
         correlation_pairs = correlation_pairs.sort_values("Correlation", ascending=False).reset_index(drop=True)
 
         # Klasifikasi korelasi (hanya yang positif kuat)
-        strong_positive_correlation = correlation_pairs[correlation_pairs["Correlation"] > 0.7]
+        strong_positive_correlation = correlation_pairs[correlation_pairs["Correlation"] > 0.6]
 
         # Hilangkan duplikasi Employee Happiness, simpan hanya korelasi tertinggi per item
         unique_strong_positive = strong_positive_correlation.drop_duplicates(subset=["Employee Happiness"], keep="first")
@@ -495,7 +504,7 @@ if df is not None:
         # **Menampilkan daftar korelasi positif kuat tanpa pengulangan**
         st.write("### 📌 Daftar Item dengan Korelasi Positif Kuat (Tanpa Pengulangan)")
         if not unique_strong_positive.empty:
-            st.write(f"#### 🔴 Korelasi Positif Kuat (r > 0.7) - **{unique_happiness_strong_positive} item**")
+            st.write(f"#### 🔴 Korelasi Positif Kuat (r > 0.6) - **{unique_happiness_strong_positive} item**")
             st.dataframe(unique_strong_positive[["Employee Happiness", "Employee Engagement", "Correlation"]])  
         else:
             st.write("ℹ️ **Tidak ada korelasi positif kuat antara Employee Happiness & Employee Engagement.**")
