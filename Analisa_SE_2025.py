@@ -10,6 +10,7 @@ st.set_page_config(layout="wide")
 
 # Tambahkan Judul Dashboard
 st.title("📊 Dashboard Analisis Item Survey Employee Happiness & Engagement")
+st.markdown("---")
 
 # URL Google Sheets dalam format CSV
 sheet_url = "https://docs.google.com/spreadsheets/d/1V_wGUbLyDn6Uo5_EyFeLRp4AgZiYB72csQQJJEg5Yn8/export?format=csv"
@@ -45,14 +46,34 @@ def load_google_sheets(url):
 df, statement_columns = load_google_sheets(sheet_url)
 
 if df is not None:
-    jabatan_list = ["All"] + sorted(df["Posisi/Jabatan"].dropna().unique().tolist())
-    selected_jabatan = st.selectbox("Pilih Jabatan:", jabatan_list)
-    df_filtered = df if selected_jabatan == "All" else df[df["Posisi/Jabatan"] == selected_jabatan]
+    # 🎯 **Filter Data**
+    st.markdown("## 🎯 **Filter Data**", unsafe_allow_html=True)
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        jabatan_list = ["All"] + sorted(df["Posisi/Jabatan"].dropna().unique().tolist())
+        selected_jabatan = st.selectbox("📌 Pilih Jabatan:", jabatan_list)
+    with col2:
+        masa_kerja_list = ["All"] + sorted(df["Masa Kerja"].dropna().unique().tolist())
+        selected_masa_kerja = st.selectbox("📌 Pilih Masa Kerja:", masa_kerja_list)
+    with col3:
+        usia_list = ["All"] + sorted(df["Usia"].dropna().unique().tolist())
+        selected_usia = st.selectbox("📌 Pilih Usia:", usia_list)
+
+    df_filtered = df
+    if selected_jabatan != "All":
+        df_filtered = df_filtered[df_filtered["Posisi/Jabatan"] == selected_jabatan]
+    if selected_masa_kerja != "All":
+        df_filtered = df_filtered[df_filtered["Masa Kerja"] == selected_masa_kerja]
+    if selected_usia != "All":
+        df_filtered = df_filtered[df_filtered["Usia"] == selected_usia]
+
+    st.divider()
 
     col1, col2 = st.columns([1, 2])
 
     with col1:
-        st.write("### Total Responden Berdasarkan Jabatan")
+        st.write("### 📌 Total Responden Berdasarkan Jabatan")
         jabatan_counts = df_filtered["Posisi/Jabatan"].value_counts()
         total_responden = jabatan_counts.sum()  # Menghitung total responden
     
@@ -87,6 +108,20 @@ if df is not None:
                 autotext.set_fontsize(10)  
 
             st.pyplot(fig)
+
+            # Menampilkan daftar nama responden sesuai filter dengan tampilan scroll
+            st.write("###📌 Daftar Nama Responden:")
+            if not df_filtered.empty and "Isikan Nama Anda" in df_filtered.columns:
+                names = df_filtered["Isikan Nama Anda"].dropna().tolist()
+
+                # Gunakan markdown dengan bullet points agar lebih rapi
+                st.markdown(
+                    '<div style="max-height: 300px; width: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 9px; border-radius: 4px;">' +
+                    "".join(f"<p>• {name}</p>" for name in names) +
+                    '</div>',
+                    unsafe_allow_html=True
+                )
+            
         else:
             st.warning("Tidak ada data responden untuk filter ini.")
 
@@ -103,7 +138,7 @@ if df is not None:
             #st.dataframe(avg_happiness.to_frame(name="Rata-rata Skor"), use_container_width=True)
 
             # Grafik Employee Happiness (Horizontal Bar Chart)
-            st.subheader("Employee Happiness")
+            st.subheader("📌 Employee Happiness")
             st.subheader("(Skala 1 s.d 4)")
 
             # Hitung rata-rata keseluruhan Employee Happiness
@@ -143,7 +178,7 @@ if df is not None:
             #st.dataframe(avg_engagement.to_frame(name="Rata-rata Skor"), use_container_width=True)
 
             ## Grafik Employee Engagement (Horizontal Bar Chart)
-            st.subheader("Employee Engagement")
+            st.subheader("📌 Employee Engagement")
 
             # Hitung rata-rata keseluruhan Employee Engagement
             overall_avg_engagement = avg_engagement.mean().round(2)
@@ -175,52 +210,83 @@ if df is not None:
 
         else:
             st.warning("Tidak ada data yang cocok dengan filter yang dipilih.")
-
-            
+        
+    st.divider()       
+    # Judul
     st.write("### 📊 Uji Validitas Employee Happiness & Engagement")
-    st.write("### (Standard Nilai >= 0.3 = Valid)")
+    st.write("### (Standard Nilai ≥ 0.3 = Valid)")
 
 if df is not None:
+    df_filtered = df.copy()  # Salin data untuk menghindari modifikasi langsung
+    
     if not df_filtered.empty:
         # Ambil kolom Employee Happiness & Employee Engagement
         happiness_columns = df.columns[6:22]  
         engagement_columns = df.columns[22:44]  
 
-        # Hitung skor total untuk Employee Happiness & Engagement
-        df_filtered["Total Happiness"] = df_filtered[happiness_columns].sum(axis=1)
-        df_filtered["Total Engagement"] = df_filtered[engagement_columns].sum(axis=1)
+        # Pastikan hanya kolom numerik yang diproses
+        df_filtered[happiness_columns] = df_filtered[happiness_columns].apply(pd.to_numeric, errors="coerce")
+        df_filtered[engagement_columns] = df_filtered[engagement_columns].apply(pd.to_numeric, errors="coerce")
 
-        ### **1️⃣ Hitung Korelasi Setiap Item dengan Total Skor**
+        # Hapus baris yang seluruhnya NaN setelah konversi
+        df_filtered.dropna(subset=list(happiness_columns) + list(engagement_columns), how="all", inplace=True)
+
+        # Cek jumlah baris setelah filtering
+        if df_filtered.shape[0] < 2:
+            st.warning("Data terlalu sedikit untuk menghitung korelasi!")
+            st.stop()
+
+        # Hitung skor total
+        df_filtered["Total Happiness"] = df_filtered[happiness_columns].sum(axis=1, skipna=True)
+        df_filtered["Total Engagement"] = df_filtered[engagement_columns].sum(axis=1, skipna=True)
+
+        # Cek apakah Total Happiness & Engagement memiliki variasi nilai
+        if df_filtered["Total Happiness"].nunique() < 2 or df_filtered["Total Engagement"].nunique() < 2:
+            st.warning("Total Happiness atau Total Engagement memiliki nilai yang sama di semua baris. Korelasi tidak bisa dihitung!")
+            st.stop()
+
+        # Hitung korelasi
         happiness_validity = df_filtered[happiness_columns].corrwith(df_filtered["Total Happiness"])
         engagement_validity = df_filtered[engagement_columns].corrwith(df_filtered["Total Engagement"])
 
-        ### **2️⃣ Tampilkan Hasil Validitas dalam Kolom**
+        # Konversi ke DataFrame
+        happiness_validity_df = happiness_validity.to_frame(name="Korelasi dengan Total Happiness")
+        engagement_validity_df = engagement_validity.to_frame(name="Korelasi dengan Total Engagement")
+
+        # Cek apakah ada kolom dengan semua NaN dalam hasil korelasi
+        if happiness_validity_df.isna().all().values[0] or engagement_validity_df.isna().all().values[0]:
+            st.warning("Korelasi tidak dapat dihitung karena semua nilai NaN atau hanya memiliki satu nilai unik.")
+            st.stop()
+
+        # **Tampilkan DataFrame tanpa Styling**
         col1, col2 = st.columns([1, 1])
 
         with col1:
             st.write("### 🔍 Validitas Employee Happiness")
-            st.dataframe(happiness_validity.to_frame(name="Korelasi dengan Total Happiness"))
+            st.dataframe(happiness_validity_df)
 
         with col2:
             st.write("### 🔍 Validitas Employee Engagement")
-            st.dataframe(engagement_validity.to_frame(name="Korelasi dengan Total Engagement"))
+            st.dataframe(engagement_validity_df)
 
-        ### **3️⃣ Kesimpulan Uji Validitas (Di Luar Layout Kolom)**
+        # **Kesimpulan Uji Validitas**
         st.write("### 📌 Kesimpulan Uji Validitas")
 
-        def interpret_validity(correlation, label):
-            invalid_questions = correlation[correlation < 0.3].index.tolist()
+        def interpret_validity(correlation_series, label):
+            invalid_questions = correlation_series[correlation_series < 0.3].index.tolist()
             if invalid_questions:
-                return f"❌ Beberapa item dalam {label} tidak valid: {', '.join(invalid_questions)}"
+                return f"❌ **Beberapa item dalam {label} tidak valid:**\n- " + "\n- ".join(invalid_questions)
             else:
-                return f"✅ Semua item dalam {label} valid."
+                return f"✅ **Semua item dalam {label} valid.**"
 
-        st.write(interpret_validity(happiness_validity, "Employee Happiness"))
-        st.write(interpret_validity(engagement_validity, "Employee Engagement"))
+        st.markdown(interpret_validity(happiness_validity, "Employee Happiness"))
+        st.markdown(interpret_validity(engagement_validity, "Employee Engagement"))
 
     else:
-        st.warning("Tidak cukup data untuk melakukan uji validitas.")
+        st.warning("Tidak ada data yang sesuai filter!")
+        st.stop()
 
+    st.divider()
     st.write("### 🔥 Korelasi Rata-rata Nilai Employee Happiness & Employee Engagement")
 
 if df is not None:
@@ -274,6 +340,7 @@ if df is not None:
     else:
         st.warning("Tidak cukup data untuk menghitung korelasi.")
 
+    st.divider()
     st.write("### 🔥 Korelasi antara Employee Happiness & Employee Engagement")
     
 if df is not None:
