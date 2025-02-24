@@ -110,7 +110,7 @@ if df is not None:
             st.pyplot(fig)
 
             # Menampilkan daftar nama responden sesuai filter dengan tampilan scroll
-            st.write("📌 Daftar Nama Responden:")
+            st.write("###📌 Daftar Nama Responden:")
             if not df_filtered.empty and "Isikan Nama Anda" in df_filtered.columns:
                 names = df_filtered["Isikan Nama Anda"].dropna().tolist()
 
@@ -211,10 +211,20 @@ if df is not None:
         else:
             st.warning("Tidak ada data yang cocok dengan filter yang dipilih.")
         
-    st.divider()       
+    st.divider()    
+    
     # Judul
-    st.write("### 📊 Uji Validitas Employee Happiness & Engagement")
-    st.write("### (Standard Nilai ≥ 0.3 = Valid)")
+st.write("### 📊 Uji Validitas & Normalitas Employee Happiness & Engagement")
+# Penjelasan tentang standar nilai validitas dan normalitas
+st.write("""
+    **1. Uji Validitas**  
+    Uji validitas mengukur sejauh mana item dalam suatu instrumen benar-benar mengukur hal yang dimaksud.  
+    Item dianggap **valid** jika korelasinya dengan skor total ≥ 0.3.
+
+    **2. Uji Normalitas**  
+    Uji normalitas menguji apakah data terdistribusi secara simetris (normal).  
+    Data dianggap **normal** jika lebih dari 95% data berada dalam rentang -1.96 hingga 1.96 dari rata-rata.
+""")
 
 if df is not None:
     df_filtered = df.copy()  # Salin data untuk menghindari modifikasi langsung
@@ -249,9 +259,42 @@ if df is not None:
         happiness_validity = df_filtered[happiness_columns].corrwith(df_filtered["Total Happiness"])
         engagement_validity = df_filtered[engagement_columns].corrwith(df_filtered["Total Engagement"])
 
-        # Konversi ke DataFrame
+        # Fungsi Z-score dan Uji Normalitas
+        def calculate_z_scores(data):
+            mean = np.mean(data)
+            std_dev = np.std(data, ddof=1)  # Gunakan ddof=1 untuk sampel
+            z_scores = [(x - mean) / std_dev for x in data]
+            return z_scores
+
+        def check_normality(z_scores):
+            threshold = 1.96  # 95% confidence level
+            outliers = [z for z in z_scores if abs(z) > threshold]
+            return len(outliers) / len(z_scores) < 0.05  # Jika <5% outlier, anggap normal
+
+        # Hitung normalitas untuk setiap item dalam Employee Happiness & Engagement
+        def get_normality_status(columns):
+            normality_status = {}
+            for col in columns:
+                z_scores = calculate_z_scores(df[col].dropna())
+                is_normal = check_normality(z_scores)
+                normality_status[col] = "Normal" if is_normal else "Tidak Normal"
+            return normality_status
+
+        happiness_normality_status = get_normality_status(happiness_columns)
+        engagement_normality_status = get_normality_status(engagement_columns)
+
+        # Gabungkan hasil validitas dan normalitas dalam DataFrame
         happiness_validity_df = happiness_validity.to_frame(name="Korelasi dengan Total Happiness")
         engagement_validity_df = engagement_validity.to_frame(name="Korelasi dengan Total Engagement")
+
+        happiness_validity_df["Status Normalitas"] = happiness_validity_df.index.map(happiness_normality_status)
+        engagement_validity_df["Status Normalitas"] = engagement_validity_df.index.map(engagement_normality_status)
+
+        # Hitung jumlah item normal dan tidak normal
+        happiness_normal_count = sum(1 for status in happiness_normality_status.values() if status == "Normal")
+        happiness_not_normal_count = len(happiness_normality_status) - happiness_normal_count
+        engagement_normal_count = sum(1 for status in engagement_normality_status.values() if status == "Normal")
+        engagement_not_normal_count = len(engagement_normality_status) - engagement_normal_count
 
         # Cek apakah ada kolom dengan semua NaN dalam hasil korelasi
         if happiness_validity_df.isna().all().values[0] or engagement_validity_df.isna().all().values[0]:
@@ -262,33 +305,81 @@ if df is not None:
         col1, col2 = st.columns([1, 1])
 
         with col1:
-            st.write("### 🔍 Validitas Employee Happiness")
+            st.write("### 🔍 Validitas dan Normalitas Employee Happiness")
             st.dataframe(happiness_validity_df)
 
         with col2:
-            st.write("### 🔍 Validitas Employee Engagement")
+            st.write("### 🔍 Validitas dan Normalitas Employee Engagement")
             st.dataframe(engagement_validity_df)
 
-        # **Kesimpulan Uji Validitas**
-        st.write("### 📌 Kesimpulan Uji Validitas")
+        # **Kesimpulan Uji Validitas dan Normalitas dalam Bentuk Tabel**
+        validity_and_normality_summary = {
+            'Label': ['Employee Happiness', 'Employee Engagement'],
+            'Jumlah Item Valid': [
+                sum(happiness_validity >= 0.3),
+                sum(engagement_validity >= 0.3)
+            ],
+            'Jumlah Item Tidak Valid': [
+                len(happiness_validity) - sum(happiness_validity >= 0.3),
+                len(engagement_validity) - sum(engagement_validity >= 0.3)
+            ],
+            'Jumlah Item Normal': [
+                sum(1 for status in happiness_normality_status.values() if status == "Normal"),
+                sum(1 for status in engagement_normality_status.values() if status == "Normal")
+            ],
+            'Jumlah Item Tidak Normal': [
+                len(happiness_normality_status) - sum(1 for status in happiness_normality_status.values() if status == "Normal"),
+                len(engagement_normality_status) - sum(1 for status in engagement_normality_status.values() if status == "Normal")
+            ]
+         }
 
-        def interpret_validity(correlation_series, label):
-            invalid_questions = correlation_series[correlation_series < 0.3].index.tolist()
-            if invalid_questions:
-                return f"❌ **Beberapa item dalam {label} tidak valid:**\n- " + "\n- ".join(invalid_questions)
-            else:
-                return f"✅ **Semua item dalam {label} valid.**"
+        summary_df = pd.DataFrame(validity_and_normality_summary)
 
-        st.markdown(interpret_validity(happiness_validity, "Employee Happiness"))
-        st.markdown(interpret_validity(engagement_validity, "Employee Engagement"))
+        # Menampilkan tabel kesimpulan
+        st.write("### 📊 Kesimpulan Uji Validitas & Normalitas")
+        st.dataframe(summary_df)
 
-    else:
-        st.warning("Tidak ada data yang sesuai filter!")
-        st.stop()
+        # **Kesimpulan Keseluruhan**
+        validity_overall = (
+            "✅ Semua item dalam Employee Happiness dan Employee Engagement valid dan memenuhi standar korelasi (≥ 0.3)."
+            if sum(happiness_validity >= 0.3) == len(happiness_validity) and sum(engagement_validity >= 0.3) == len(engagement_validity)
+            else "⚠️ Beberapa item dalam Employee Happiness dan Employee Engagement tidak valid, perlu ditinjau lebih lanjut."
+        )
 
-    st.divider()
+        normality_overall = (
+            "✅ Sebagian besar item dalam Employee Happiness dan Employee Engagement terdistribusi normal."
+            if (happiness_normal_count > 0 and engagement_normal_count > 0) else "⚠️ Tidak semua item dalam Employee Happiness dan Employee Engagement terdistribusi normal."
+        )
+        st.write("### 📌 Kesimpulan Keseluruhan:")
+        if sum(happiness_validity < 0.3) > 0 or sum(engagement_validity < 0.3) > 0:
+            st.markdown("❗ **Tindak Lanjut untuk Item Tidak Valid:**")
+            st.markdown("   - Revisi item yang memiliki korelasi < 0.3. Pertimbangkan untuk mengubah pertanyaan atau cara pengukuran, atau mengevaluasi relevansi item tersebut.")
+        else:
+            st.markdown("✅ **Tidak ada item yang tidak valid. Lanjutkan analisis dengan data yang valid.**")
+
+        if happiness_normal_count == 0 or engagement_normal_count == 0:
+            st.markdown("❗ **Tindak Lanjut untuk Item Tidak Normal:**")
+            st.markdown("   - Lakukan transformasi data pada item yang tidak terdistribusi normal, seperti log-transformasi atau square root.")
+            st.markdown("   - Pertimbangkan untuk menggunakan analisis non-parametrik jika transformasi tidak berhasil.")
+        else:
+            st.markdown("✅ **Sebagian besar item terdistribusi normal. Lanjutkan dengan analisis menggunakan metode parametik.**")
+        
+        st.divider()
+    
     st.write("### 🔥 Korelasi Rata-rata Nilai Employee Happiness & Employee Engagement")
+    st.write("### 📊 Penjelasan Norma Uji Korelasi")
+    st.write("""
+Untuk menginterpretasikan kekuatan hubungan antara dua variabel, digunakan standar berikut:
 
+- **0.00 - 0.19**: Korelasi sangat lemah atau tidak ada korelasi
+- **0.20 - 0.39**: Korelasi lemah
+- **0.40 - 0.59**: Korelasi sedang
+- **0.60 - 0.79**: Korelasi kuat
+- **0.80 - 1.00**: Korelasi sangat kuat
+
+Nilai positif menunjukkan hubungan positif, sedangkan nilai negatif menunjukkan hubungan negatif.
+""" )
+    
 if df is not None:
     if not df_filtered.empty:
         # Ambil kolom Employee Happiness & Employee Engagement
@@ -341,8 +432,8 @@ if df is not None:
         st.warning("Tidak cukup data untuk menghitung korelasi.")
 
     st.divider()
-    st.write("### 🔥 Korelasi antara Employee Happiness & Employee Engagement")
     
+    st.write("### 🔥 Korelasi antara Employee Happiness & Employee Engagement")
 if df is not None:
     if not df_filtered.empty:
         # Ambil kolom Employee Happiness & Employee Engagement
