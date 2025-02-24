@@ -110,7 +110,7 @@ if df is not None:
             st.pyplot(fig)
 
             # Menampilkan daftar nama responden sesuai filter dengan tampilan scroll
-            st.write("###📌 Daftar Nama Responden:")
+            st.write("📌 Daftar Nama Responden:")
             if not df_filtered.empty and "Isikan Nama Anda" in df_filtered.columns:
                 names = df_filtered["Isikan Nama Anda"].dropna().tolist()
 
