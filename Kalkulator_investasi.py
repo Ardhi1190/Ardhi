@@ -2,6 +2,7 @@ import streamlit as st
 import numpy_financial as npf
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 
 # Konfigurasi Layout Wide
 st.set_page_config(page_title="Kalkulator Investasi", layout="wide")
@@ -99,9 +100,6 @@ if generate_clicked:
 
         risk_ratio = total_pendapatan / total_cicilan if total_cicilan > 0 else None
 
-        # Perhitungan Payback Period
-        payback_period = next((i+1 for i, c in enumerate(cumulative_cashflow[1:]) if c >= 0), None)
-
         # Perhitungan IRR
         irr = npf.irr(cashflow)
         irr_display = f"{irr*100:.2f}%" if not np.isnan(irr) else "Tidak dapat dihitung"
@@ -114,6 +112,30 @@ if generate_clicked:
                 "Total Cicilan": "Rp {:,.0f}",
                 "Cashflow": "Rp {:,.0f}",
             }), height=420, use_container_width=True)
+
+        # Tampilkan Grafik Cashflow
+        #st.markdown("### 📈 Grafik Tren Arus Kas")
+
+        # Atur ukuran font untuk seluruh elemen grafik
+        plt.rcParams.update({'font.size': 7})  # Ukuran font kecil untuk semua elemen
+
+        # Buat figure dengan ukuran lebih kecil
+        fig, ax = plt.subplots(figsize=(6, 1.5))  # Lebar 6 inci, tinggi 3 inci
+        ax.plot(range(1, num_periods + 1), cashflow[1:num_periods + 1], marker='o', linestyle='-', color='b', label="Cashflow")
+
+        # Label dan Tampilan
+        ax.set_xlabel("Tahun")
+        ax.set_ylabel("Cashflow (Rp)")
+        ax.set_title("Tren Arus Kas")
+        ax.legend(fontsize=8)
+        ax.grid(True)
+
+        # Sesuaikan sumbu X agar hanya menampilkan tahun yang relevan
+        ax.set_xticks(range(1, num_periods + 1))
+
+        # Tampilkan grafik di Streamlit
+        with col_cashflow:
+            st.pyplot(fig)
 
         # Analisis Risiko & IRR
         st.markdown("### 🔍 Analisis Risiko & Profitabilitas")
@@ -155,7 +177,19 @@ if generate_clicked:
                 kesimpulan += f"⚖️ **Rasio Risiko:** {risk_ratio:.2f}, menunjukkan bahwa pendapatan cukup untuk membayar cicilan, namun tetap perlu perhitungan lebih lanjut.\n\n"
             else:
                 kesimpulan += f"❌ **Rasio Risiko:** {risk_ratio:.2f}, menunjukkan bahwa pendapatan tidak cukup untuk membayar cicilan, sehingga investasi ini memiliki risiko tinggi.\n\n"
-        
+
+        # Tentukan Sentimen Investasi
+        sentimen = "🔵 Netral"
+        if irr >= 0.15 and risk_ratio > 1.5:
+            sentimen = "🟢 Positif (Investasi Menguntungkan)"
+        elif irr < annual_rate / 100 or risk_ratio < 1:
+            sentimen = "🔴 Negatif (Risiko Tinggi)"
+
+        # Tambahkan ke Kesimpulan
+        kesimpulan += f"**📌 Sentimen Investasi: {sentimen}**\n\n"
+
         st.info(kesimpulan)
+  
+      
 
 
