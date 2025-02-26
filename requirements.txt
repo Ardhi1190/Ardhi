@@ -3,5 +3,3 @@ pandas
 numpy
 matplotlib
 requests
-import numpy_financial as npf
-from fpdf import FPDF
