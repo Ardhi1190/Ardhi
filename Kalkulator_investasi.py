@@ -47,17 +47,17 @@ for i in range(1, periods + 1):
 
 df_ang = pd.DataFrame(data, columns=["Tahun", "Saldo Awal", "Total Cicilan", "Angsuran Pokok", "Bunga", "Sisa Pinjaman"])
 total_cicilan = sum(df_ang["Total Cicilan"])
-
 # Tampilkan Tabel Angsuran
 with col_ang:
-    st.markdown(f"### 📊 Tabel Angsuran untuk Proyek: {project_name}")
+    st.markdown("### 📜 Tabel Angsuran Pinjaman")
     st.dataframe(df_ang.style.format({
         "Saldo Awal": "Rp {:,.0f}",
         "Total Cicilan": "Rp {:,.0f}",
         "Angsuran Pokok": "Rp {:,.0f}",
         "Bunga": "Rp {:,.0f}",
-        "Sisa Pinjaman": "Rp {:,.0f}"
-    }), use_container_width=True)
+        "Sisa Pinjaman": "Rp {:,.0f}",
+    }), height=390, use_container_width=True)
+
 
 # Layout Input Pendapatan dan Tabel Cashflow
 col_pendapatan, col_cashflow = st.columns([1, 2])
@@ -82,17 +82,21 @@ if generate_clicked:
     else:
         # Hitung Cashflow
         cashflow = [-principal] + [p - c for p, c in zip(pendapatan_list, df_ang["Total Cicilan"])]
-        cumulative_cashflow = np.cumsum(cashflow)
+        cumulative_cashflow = principal - df_ang["Angsuran Pokok"].cumsum()
 
+        # Hitung Total
+        total_pendapatan = sum(pendapatan_list)
+        total_cicilan = sum(df_ang["Total Cicilan"])
+        total_cashflow = sum(cashflow[1:])
+
+        # Buat DataFrame Cashflow
         df_cashflow = pd.DataFrame({
-            "Tahun": range(1, periods + 1),
-            "Pendapatan": pendapatan_list,
-            "Total Cicilan": df_ang["Total Cicilan"],
-            "Cashflow": cashflow[1:],
-            "Cumulative Cashflow": cumulative_cashflow[1:]
+            "Tahun": list(range(1, periods + 1)) + ["Total"],
+            "Pendapatan": pendapatan_list + [total_pendapatan],
+            "Total Cicilan": list(df_ang["Total Cicilan"]) + [total_cicilan],
+            "Cashflow": cashflow[1:] + [total_cashflow],
         })
 
-        total_pendapatan = sum(pendapatan_list)
         risk_ratio = total_pendapatan / total_cicilan if total_cicilan > 0 else None
 
         # Perhitungan Payback Period
@@ -109,33 +113,22 @@ if generate_clicked:
                 "Pendapatan": "Rp {:,.0f}",
                 "Total Cicilan": "Rp {:,.0f}",
                 "Cashflow": "Rp {:,.0f}",
-                "Cumulative Cashflow": "Rp {:,.0f}"
-            }), use_container_width=True)
+            }), height=420, use_container_width=True)
 
-        # Analisis Balik Modal & Risiko
-        st.markdown("### 🔍 Analisis Balik Modal & Risiko")
-
-        st.markdown("#### 📌 Payback Period")
-        st.latex(r"Payback\ Period = \sum_{t=0}^{n} Cashflow_t \geq 0")
-        st.write("**Dasar Perhitungan:** Payback period dihitung dengan mencari tahun pertama di mana arus kas kumulatif menjadi positif atau nol.")
-        if payback_period is not None:
-            st.success(f"✅ Proyek akan balik modal pada tahun ke-{payback_period}.")
-        else:
-            st.error("❌ Investasi belum balik modal dalam periode yang ditentukan.")
-
-        st.markdown("---")  # Pembatas
+        # Analisis Risiko & IRR
+        st.markdown("### 🔍 Analisis Risiko & Profitabilitas")
+        
         st.markdown("#### 📊 Internal Rate of Return (IRR)")
         st.latex(r"IRR = \text{Tingkat Diskonto yang membuat } NPV = 0")
-        st.write("**Dasar Perhitungan:** IRR adalah tingkat pengembalian yang membuat Net Present Value (NPV) menjadi nol.")
+        st.write("**Interpretasi:** IRR menunjukkan tingkat pengembalian dari investasi ini. Jika IRR lebih besar dari suku bunga pinjaman, maka proyek ini menguntungkan.")
         if np.isnan(irr) or irr < 0:
-            st.error(f"❌ **IRR Tidak Valid:** {irr_display}. Jika negatif atau tidak dapat dihitung, maka investasi tidak menguntungkan.")
+            st.error(f"❌ **IRR Tidak Valid:** {irr_display}. Artinya, investasi ini tidak memberikan pengembalian yang cukup.")
         else:
-            st.success(f"✅ **IRR:** {irr_display}. Jika lebih besar dari suku bunga pinjaman ({annual_rate:.2f}%), maka investasi layak.")
-
-        st.markdown("---")  # Pembatas
+            st.success(f"✅ **IRR:** {irr_display}. Jika lebih besar dari suku bunga pinjaman ({annual_rate:.2f}%), maka investasi ini menjanjikan.")
+        
         st.markdown("#### ⚖️ Rasio Risiko")
         st.latex(r"Rasio\ Risiko = \frac{Total\ Pendapatan}{Total\ Cicilan}")
-        st.write("**Dasar Perhitungan:** Rasio ini mengukur seberapa besar pendapatan dibandingkan dengan total cicilan.")
+        st.write("**Interpretasi:** Rasio risiko membandingkan total pendapatan dengan total cicilan. Jika rasio lebih besar dari 1, pendapatan cukup untuk membayar cicilan.")
         if risk_ratio:
             if risk_ratio > 1:
                 st.success(f"✅ **Rasio Risiko:** {risk_ratio:.2f} (Pendapatan cukup untuk menutup cicilan).")
@@ -143,3 +136,26 @@ if generate_clicked:
                 st.error(f"❌ **Rasio Risiko:** {risk_ratio:.2f} (Pendapatan tidak cukup, risiko tinggi).")
         else:
             st.warning("⚠️ Tidak dapat menghitung rasio risiko.")
+
+        # Kesimpulan Analisa
+        st.markdown("### 📌 Kesimpulan Analisa")
+        kesimpulan = ""
+
+        if np.isnan(irr) or irr < annual_rate / 100:
+            kesimpulan += "❌ **Hasil Analisa:** IRR berada di bawah suku bunga pinjaman, yang berarti investasi ini perlu dipertimbangkan karena tingkat pengembaliannya tidak cukup tinggi.\n\n"
+        elif irr >= annual_rate / 100 and irr < 0.15:  # IRR antara suku bunga dan 15% dianggap "Perlu dipertimbangkan"
+            kesimpulan += f"⚖️ **Hasil Analisa:** IRR sebesar {irr_display}. Proyek ini memiliki potensi yang cukup baik, namun tetap perlu dianalisis lebih lanjut sebelum keputusan investasi diambil.\n\n"
+        else:  # IRR di atas 15% dianggap "Sangat baik untuk investasi"
+            kesimpulan += f"✅ **Hasil Analisa:** IRR sebesar {irr_display}. Proyek ini sangat baik untuk investasi karena tingkat pengembaliannya lebih tinggi dari suku bunga pinjaman dan cukup menarik.\n\n"
+
+        if risk_ratio:
+            if risk_ratio > 1.5:
+                kesimpulan += f"✅ **Rasio Risiko:** {risk_ratio:.2f}, menandakan proyek ini memiliki pendapatan yang sangat cukup untuk menutup cicilan, sehingga aman untuk investasi.\n\n"
+            elif risk_ratio > 1:
+                kesimpulan += f"⚖️ **Rasio Risiko:** {risk_ratio:.2f}, menunjukkan bahwa pendapatan cukup untuk membayar cicilan, namun tetap perlu perhitungan lebih lanjut.\n\n"
+            else:
+                kesimpulan += f"❌ **Rasio Risiko:** {risk_ratio:.2f}, menunjukkan bahwa pendapatan tidak cukup untuk membayar cicilan, sehingga investasi ini memiliki risiko tinggi.\n\n"
+        
+        st.info(kesimpulan)
+
+
