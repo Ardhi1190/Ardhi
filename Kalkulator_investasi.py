@@ -50,7 +50,7 @@ df_ang = pd.DataFrame(data, columns=["Tahun", "Saldo Awal", "Total Cicilan", "An
 total_cicilan = sum(df_ang["Total Cicilan"])
 # Tampilkan Tabel Angsuran
 with col_ang:
-    st.markdown("### 📜 Tabel Angsuran Pinjaman")
+    st.markdown(f"### 📜 Tabel Angsuran Pinjaman: {project_name}")
     st.dataframe(df_ang.style.format({
         "Saldo Awal": "Rp {:,.0f}",
         "Total Cicilan": "Rp {:,.0f}",
