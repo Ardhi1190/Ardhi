@@ -1,46 +1,68 @@
 import streamlit as st
 import numpy_financial as npf
 import pandas as pd
-from fpdf import FPDF
+import numpy as np
 
 # Konfigurasi Layout Wide
 st.set_page_config(page_title="Kalkulator Investasi", layout="wide")
 
-# Desain Header
-st.markdown(
-    "<h1 style='text-align: center; color: #007BFF;'>💰 Kalkulator Investasi 💰</h1>",
-    unsafe_allow_html=True
-)
+# Header
+st.markdown("<h1 style='text-align: center; color: #007BFF;'>💰 Kalkulator Investasi 💰</h1>", unsafe_allow_html=True)
 st.write("🔹 Hitung angsuran pinjaman dan analisis arus kas investasi.")
 
 # Input Nama Proyek
 project_name = st.text_input("🏢 Nama Proyek Investasi", "")
 
-# Layout Input Diperkecil
-col_input, col_result = st.columns([1, 3])  # Kolom input lebih kecil, tabel lebih lebar
-
+# Layout Input dan Tabel Angsuran
+col_input, col_ang = st.columns([1, 2])
 with col_input:
     st.markdown("### 📝 Input Data")
     principal_input = st.text_input("💵 Jumlah Pinjaman", "0")
     annual_rate = st.number_input("📊 Suku Bunga Tahunan (%)", min_value=0.0, value=0.0, step=0.1)
     num_periods = st.number_input("⏳ Jangka Waktu (Tahun)", min_value=1, value=1, step=1)
 
-    # Convert input principal menjadi format dengan pemisah ribuan
-    if principal_input != "":
-        try:
-            principal = float(principal_input.replace(",", "").replace(".", ""))  # Hapus koma atau titik jika ada
-        except ValueError:
-            principal = 0
-    else:
+    # Konversi input jumlah pinjaman ke float
+    try:
+        principal = float(principal_input.replace(",", "").replace(".", ""))
+    except ValueError:
         principal = 0
 
-st.markdown("<hr>", unsafe_allow_html=True)  # Garis pemisah
+# Hitung Angsuran
+rate = annual_rate / 100
+periods = num_periods
 
-# Kolom Pendapatan Muncul Sebelum Generate
+if rate > 0:
+    pmt = npf.pmt(rate, periods, -principal)
+else:
+    pmt = principal / periods
+
+balance = principal
+data = []
+for i in range(1, periods + 1):
+    saldo_awal = balance
+    interest = balance * rate
+    principal_payment = pmt - interest
+    balance -= principal_payment
+    data.append([i, saldo_awal, pmt, principal_payment, interest, max(0, balance)])
+
+df_ang = pd.DataFrame(data, columns=["Tahun", "Saldo Awal", "Total Cicilan", "Angsuran Pokok", "Bunga", "Sisa Pinjaman"])
+total_cicilan = sum(df_ang["Total Cicilan"])
+
+# Tampilkan Tabel Angsuran
+with col_ang:
+    st.markdown(f"### 📊 Tabel Angsuran untuk Proyek: {project_name}")
+    st.dataframe(df_ang.style.format({
+        "Saldo Awal": "Rp {:,.0f}",
+        "Total Cicilan": "Rp {:,.0f}",
+        "Angsuran Pokok": "Rp {:,.0f}",
+        "Bunga": "Rp {:,.0f}",
+        "Sisa Pinjaman": "Rp {:,.0f}"
+    }), use_container_width=True)
+
+# Layout Input Pendapatan dan Tabel Cashflow
+col_pendapatan, col_cashflow = st.columns([1, 2])
 pendapatan_list = []
-col_input_small, col_table_wide = st.columns([1, 3])  # Kolom input kecil, tabel lebih lebar
-
-with col_input_small:
+with col_pendapatan:
     st.markdown("### 💰 Masukkan Pendapatan")
     for i in range(1, num_periods + 1):
         pendapatan_input = st.text_input(f"Pendapatan Tahun {i}", "0")
@@ -49,130 +71,75 @@ with col_input_small:
         except ValueError:
             pendapatan = 0
         pendapatan_list.append(pendapatan)
-st.markdown("<hr>", unsafe_allow_html=True)  # Garis pemisah
 
-# Tombol Generate (Tetap Tampil)
+# Tombol Generate Perhitungan
 generate_clicked = st.button("🔍 Generate Perhitungan", key="generate_btn")
 
-# Perhitungan Hanya Jika Semua Input Terisi
+# Jalankan perhitungan hanya setelah tombol ditekan
 if generate_clicked:
-    # Validasi input
-    missing_input = []
-    if not project_name:
-        missing_input.append("Nama Proyek")
-    if principal <= 0:
-        missing_input.append("Jumlah Pinjaman")
-    if annual_rate <= 0:
-        missing_input.append("Suku Bunga Tahunan")
-    if num_periods <= 0:
-        missing_input.append("Jangka Waktu (Tahun)")
-    if any(p <= 0 for p in pendapatan_list):
-        missing_input.append("Pendapatan")
-
-    # Jika ada input yang hilang, beri peringatan
-    if missing_input:
-        st.warning(f"⚠️ Harap isi data berikut: {', '.join(missing_input)}")
+    if not all(p > 0 for p in pendapatan_list) or principal <= 0:
+        st.warning("⚠️ Harap masukkan semua pendapatan dan jumlah pinjaman sebelum melakukan perhitungan.")
     else:
-        rate = (annual_rate / 100)
-        periods = num_periods
-        period_label = "Tahun"
-
-        if rate > 0:
-            pmt = npf.pmt(rate, periods, -principal)
-        else:
-            pmt = principal / periods
-
-        # Perhitungan Tabel Angsuran
-        balance = principal
-        data = []
-
-        for i in range(1, periods + 1):
-            saldo_awal = balance
-            interest = balance * rate
-            principal_payment = pmt - interest
-            balance -= principal_payment
-            data.append([i, saldo_awal, pmt, principal_payment, interest, max(0, balance)])
-
-        df_ang = pd.DataFrame(data, columns=[period_label, "Saldo Awal", "Total Cicilan", "Angsuran Pokok", "Bunga", "Sisa Pinjaman"])
-
-        # Tampilkan Tabel Angsuran di Kolom Lebar
-        with col_result:
-            st.markdown(f"### 📊 Tabel Angsuran untuk Proyek: {project_name}")
-            st.dataframe(df_ang.style.format({
-                "Saldo Awal": "Rp {:,.0f}",
-                "Total Cicilan": "Rp {:,.0f}",
-                "Angsuran Pokok": "Rp {:,.0f}",
-                "Bunga": "Rp {:,.0f}",
-                "Sisa Pinjaman": "Rp {:,.0f}"
-            }))
-
-        # Hitung Cashflow & IRR
-        df_pendapatan = pd.DataFrame({period_label: range(1, periods + 1), "Pendapatan": pendapatan_list})
+        # Hitung Cashflow
         cashflow = [-principal] + [p - c for p, c in zip(pendapatan_list, df_ang["Total Cicilan"])]
-        irr_value = npf.irr(cashflow)
+        cumulative_cashflow = np.cumsum(cashflow)
 
-        # Tampilkan Tabel Arus Kas Lebih Lebar
-        with col_table_wide:
+        df_cashflow = pd.DataFrame({
+            "Tahun": range(1, periods + 1),
+            "Pendapatan": pendapatan_list,
+            "Total Cicilan": df_ang["Total Cicilan"],
+            "Cashflow": cashflow[1:],
+            "Cumulative Cashflow": cumulative_cashflow[1:]
+        })
+
+        total_pendapatan = sum(pendapatan_list)
+        risk_ratio = total_pendapatan / total_cicilan if total_cicilan > 0 else None
+
+        # Perhitungan Payback Period
+        payback_period = next((i+1 for i, c in enumerate(cumulative_cashflow[1:]) if c >= 0), None)
+
+        # Perhitungan IRR
+        irr = npf.irr(cashflow)
+        irr_display = f"{irr*100:.2f}%" if not np.isnan(irr) else "Tidak dapat dihitung"
+
+        # Tampilkan Tabel Cashflow
+        with col_cashflow:
             st.markdown(f"### 📊 Tabel Arus Kas untuk Proyek: {project_name}")
-            df_cashflow = pd.DataFrame({
-                period_label: range(1, periods + 1),
-                "Pendapatan": pendapatan_list,
-                "Total Cicilan": df_ang["Total Cicilan"],
-                "Cashflow": [p - c for p, c in zip(pendapatan_list, df_ang["Total Cicilan"])]
-            })
             st.dataframe(df_cashflow.style.format({
                 "Pendapatan": "Rp {:,.0f}",
                 "Total Cicilan": "Rp {:,.0f}",
-                "Cashflow": "Rp {:,.0f}"
-            }))
+                "Cashflow": "Rp {:,.0f}",
+                "Cumulative Cashflow": "Rp {:,.0f}"
+            }), use_container_width=True)
 
-        # Pindahkan IRR setelah tabel cashflow
-        st.subheader(f"📈 Internal Rate of Return (IRR): {irr_value:.2%}")
+        # Analisis Balik Modal & Risiko
+        st.markdown("### 🔍 Analisis Balik Modal & Risiko")
 
-        # Kesimpulan Otomatis
-        if irr_value > 0.1:
-            st.markdown("### 🔹 Kesimpulan: Investasi Menguntungkan")
-            st.write(
-                f"📊 IRR yang dihitung sebesar **{irr_value*100:.2f}%** menunjukkan bahwa investasi ini memberikan return yang positif. Jika Anda mencari investasi yang menghasilkan return lebih dari 10%, maka ini adalah pilihan yang tepat!"
-            )
+        st.markdown("#### 📌 Payback Period")
+        st.latex(r"Payback\ Period = \sum_{t=0}^{n} Cashflow_t \geq 0")
+        st.write("**Dasar Perhitungan:** Payback period dihitung dengan mencari tahun pertama di mana arus kas kumulatif menjadi positif atau nol.")
+        if payback_period is not None:
+            st.success(f"✅ Proyek akan balik modal pada tahun ke-{payback_period}.")
         else:
-            st.markdown("### 🔹 Kesimpulan: Investasi Kurang Menguntungkan")
-            st.write(
-                f"📉 IRR yang dihitung sebesar **{irr_value*100:.2f}%** menunjukkan bahwa investasi ini menghasilkan return yang rendah. Mungkin Anda ingin mempertimbangkan kembali keputusan investasi ini."
-            )
+            st.error("❌ Investasi belum balik modal dalam periode yang ditentukan.")
 
-        # Tombol Print untuk mengunduh data dalam format PDF
-        print_pdf = st.button("🖨️ Cetak Data sebagai PDF")
-        if print_pdf:
-            try:
-                # Membuat PDF
-                pdf = FPDF()
-                pdf.set_auto_page_break(auto=True, margin=15)
-                pdf.add_page()
-                pdf.set_font("Arial", size=12)
+        st.markdown("---")  # Pembatas
+        st.markdown("#### 📊 Internal Rate of Return (IRR)")
+        st.latex(r"IRR = \text{Tingkat Diskonto yang membuat } NPV = 0")
+        st.write("**Dasar Perhitungan:** IRR adalah tingkat pengembalian yang membuat Net Present Value (NPV) menjadi nol.")
+        if np.isnan(irr) or irr < 0:
+            st.error(f"❌ **IRR Tidak Valid:** {irr_display}. Jika negatif atau tidak dapat dihitung, maka investasi tidak menguntungkan.")
+        else:
+            st.success(f"✅ **IRR:** {irr_display}. Jika lebih besar dari suku bunga pinjaman ({annual_rate:.2f}%), maka investasi layak.")
 
-                pdf.cell(200, 10, txt="Kalkulator Investasi", ln=True, align="C")
-                pdf.cell(200, 10, txt=f"Nama Proyek: {project_name}", ln=True)
-
-                # Menambahkan tabel Cashflow
-                pdf.cell(200, 10, txt="Tabel Arus Kas:", ln=True)
-                for i in range(len(df_cashflow)):
-                    pdf.cell(40, 10, txt=str(df_cashflow.iloc[i][period_label]), border=1, align="C")
-                    pdf.cell(60, 10, txt=f"Rp {df_cashflow.iloc[i]['Pendapatan']:,}", border=1, align="C")
-                    pdf.cell(60, 10, txt=f"Rp {df_cashflow.iloc[i]['Total Cicilan']:,}", border=1, align="C")
-                    pdf.cell(60, 10, txt=f"Rp {df_cashflow.iloc[i]['Cashflow']:,}", border=1, align="C")
-                    pdf.ln()
-
-                # Menyimpan PDF ke file dan memberikan link download
-                pdf_output = pdf.output(dest='S').encode('utf-8')
-
-                # Menggunakan Streamlit untuk mendownload PDF
-                st.download_button(
-                    label="Unduh PDF",
-                    data=pdf_output,
-                    file_name=f"{project_name}_cashflow.pdf",
-                    mime="application/pdf"
-                )
-
-            except Exception as e:
-                st.error(f"Gagal membuat PDF: {e}")
+        st.markdown("---")  # Pembatas
+        st.markdown("#### ⚖️ Rasio Risiko")
+        st.latex(r"Rasio\ Risiko = \frac{Total\ Pendapatan}{Total\ Cicilan}")
+        st.write("**Dasar Perhitungan:** Rasio ini mengukur seberapa besar pendapatan dibandingkan dengan total cicilan.")
+        if risk_ratio:
+            if risk_ratio > 1:
+                st.success(f"✅ **Rasio Risiko:** {risk_ratio:.2f} (Pendapatan cukup untuk menutup cicilan).")
+            else:
+                st.error(f"❌ **Rasio Risiko:** {risk_ratio:.2f} (Pendapatan tidak cukup, risiko tinggi).")
+        else:
+            st.warning("⚠️ Tidak dapat menghitung rasio risiko.")
