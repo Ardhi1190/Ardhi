@@ -138,17 +138,7 @@ if generate_clicked:
         with col_cashflow:
             st.pyplot(fig)
 
-        # Analisis Risiko & IRR
-        st.markdown("### 🔍 Analisis Risiko & Profitabilitas")
-        
-        st.markdown("#### 📊 Internal Rate of Return (IRR)")
-        st.latex(r"IRR = \text{Tingkat Diskonto yang membuat } NPV = 0")
-        st.write("**Interpretasi:** IRR menunjukkan tingkat pengembalian dari investasi ini. Jika IRR lebih besar dari suku bunga pinjaman, maka proyek ini menguntungkan.")
-        if np.isnan(irr) or irr < 0:
-            st.error(f"❌ **IRR Tidak Valid:** {irr_display}. Artinya, investasi ini tidak memberikan pengembalian yang cukup.")
-        else:
-            st.success(f"✅ **IRR:** {irr_display}. Jika lebih besar dari suku bunga pinjaman ({annual_rate:.2f}%), maka investasi ini menjanjikan.")
-        
+        # Analisis Risiko 
         st.markdown("#### ⚖️ Rasio Risiko")
         st.latex(r"Rasio\ Risiko = \frac{Total\ Pendapatan}{Total\ Cicilan}")
         st.write("**Interpretasi:** Rasio risiko membandingkan total pendapatan dengan total cicilan. Jika rasio lebih besar dari 1, pendapatan cukup untuk membayar cicilan.")
@@ -160,36 +150,7 @@ if generate_clicked:
         else:
             st.warning("⚠️ Tidak dapat menghitung rasio risiko.")
 
-        # Kesimpulan Analisa
-        st.markdown("### 📌 Kesimpulan Analisa")
-        kesimpulan = ""
-
-        if np.isnan(irr) or irr < annual_rate / 100:
-            kesimpulan += "❌ **Hasil Analisa:** IRR berada di bawah suku bunga pinjaman, yang berarti investasi ini perlu dipertimbangkan karena tingkat pengembaliannya tidak cukup tinggi.\n\n"
-        elif irr >= annual_rate / 100 and irr < 0.15:  # IRR antara suku bunga dan 15% dianggap "Perlu dipertimbangkan"
-            kesimpulan += f"⚖️ **Hasil Analisa:** IRR sebesar {irr_display}. Proyek ini memiliki potensi yang cukup baik, namun tetap perlu dianalisis lebih lanjut sebelum keputusan investasi diambil.\n\n"
-        else:  # IRR di atas 15% dianggap "Sangat baik untuk investasi"
-            kesimpulan += f"✅ **Hasil Analisa:** IRR sebesar {irr_display}. Proyek ini sangat baik untuk investasi karena tingkat pengembaliannya lebih tinggi dari suku bunga pinjaman dan cukup menarik.\n\n"
-
-        if risk_ratio:
-            if risk_ratio > 1.5:
-                kesimpulan += f"✅ **Rasio Risiko:** {risk_ratio:.2f}, menandakan proyek ini memiliki pendapatan yang sangat cukup untuk menutup cicilan, sehingga aman untuk investasi.\n\n"
-            elif risk_ratio > 1:
-                kesimpulan += f"⚖️ **Rasio Risiko:** {risk_ratio:.2f}, menunjukkan bahwa pendapatan cukup untuk membayar cicilan, namun tetap perlu perhitungan lebih lanjut.\n\n"
-            else:
-                kesimpulan += f"❌ **Rasio Risiko:** {risk_ratio:.2f}, menunjukkan bahwa pendapatan tidak cukup untuk membayar cicilan, sehingga investasi ini memiliki risiko tinggi.\n\n"
-
-        # Tentukan Sentimen Investasi
-        sentimen = "🔵 Netral"
-        if irr >= 0.15 and risk_ratio > 1.5:
-            sentimen = "🟢 Positif (Investasi Menguntungkan)"
-        elif irr < annual_rate / 100 or risk_ratio < 1:
-            sentimen = "🔴 Negatif (Risiko Tinggi)"
-
-        # Tambahkan ke Kesimpulan
-        kesimpulan += f"**📌 Sentimen Investasi: {sentimen}**\n\n"
-
-        st.info(kesimpulan)
+    
   
       
 
