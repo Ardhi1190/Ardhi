@@ -5,67 +5,85 @@ import pandas as pd
 # Dibuat per halaman dengan pertanyaan acak
 def main():
     logo_url = "https://www.agungtoyota.co.id/app/sam/assets/addons/sam/sam/samcgi-theme/resources/img/favicons/apple-touch-icon.png?v=1740058172"
-    st.set_page_config(page_title="Employee Engagement Survey", page_icon=logo_url, layout="wide")
+    st.set_page_config(page_title="Employee Engagement Survey", page_icon=logo_url, layout="centered")
     logo_url2 = "https://www.agungtoyota.co.id/app/sam/assets/logo/logo-baru-1.png"
     logo_url1 = "https://agungconcern.co.id/wp-content/uploads/2024/08/Logo-Agung-Concern-2024.svg"
 # Tambahkan CSS untuk tampilan yang lebih rapi
     st.markdown(
     f"""
     <style>
+        /* Header dengan responsive layout */
         .header-container {{
             display: flex;
-            justify-content: space-between;
+            flex-wrap: wrap; /* Agar rapi di mobile */
+            justify-content: center;
             align-items: center;
-            padding: 10px 50px;
+            padding: 10px 20px; /* Lebih fleksibel */
             background-color: rgba(240, 240, 255, 0.6);
             border-radius: 10px;
+            text-align: center;
         }}
+        
         .header-logo {{
-            width: 150px;
+            width: 120px; /* Ukuran default */
+            max-width: 40%; /* Biar responsif */
+            height: auto;
+            margin: 5px 10px; /* Beri jarak */
         }}
-        h1 {{ font-size: 40px !important; text-align: center; color: black !important; }}
-        h2 {{ font-size: 34px !important; text-align: center; color: black !important; }}
-        p, label {{ font-size: 20px !important; color: black !important; }}
-        .stButton button {{ width: 100%; font-size: 22px !important; padding: 10px; background: rgba(162, 155, 254, 0.8); color: white; border-radius: 10px; border: none; }}
-        .stProgress > div > div > div {{ background-color: rgba(162, 155, 254, 0.8); }}
-        .stRadio > label {{ font-size: 20px !important; color: black !important; }}
 
-         /* Styling untuk tombol agar terlihat soft 3D */
+        h1 {{
+            font-size: clamp(24px, 5vw, 40px) !important;
+            text-align: center;
+            color: black !important;
+        }}
+
+        h2 {{
+            font-size: clamp(20px, 4.5vw, 34px) !important;
+            text-align: center;
+            color: black !important;
+        }}
+
+        p, label {{
+            font-size: clamp(16px, 4vw, 20px) !important;
+            color: black !important;
+        }}
+
         .stButton button {{
             width: 100%;
-            font-size: 20px !important;
+            font-size: clamp(16px, 3vw, 20px) !important;
             padding: 12px;
-            background: linear-gradient(to bottom, #d8bfff, #a0c4ff); /* Soft gradient (lavender ke sky blue) */
+            background: linear-gradient(to bottom, #d8bfff, #a0c4ff);
             color: black;
             border-radius: 12px;
             border: 2px solid #cdb4db;
-            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.15); /* Bayangan lebih lembut */
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.15);
             transition: all 0.2s ease-in-out;
         }}
+
         .stButton button:hover {{
             background: linear-gradient(to bottom, #a0c4ff, #d8bfff);
             box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.2);
             transform: translateY(-2px);
         }}
+
         .stButton button:active {{
             box-shadow: 1px 1px 4px rgba(0, 0, 0, 0.1);
             transform: translateY(2px);
         }}
 
-
-
-        /* Footer */
+        /* Footer Responsif */
         .footer-container {{
-            position: fixed;
-            bottom: 0;
-            width: 90%;
+            position: relative; /* Agar tetap rapi di mobile */
+            width: 100%;
             background-color: rgba(240, 240, 255, 0.6);
-            text-align: right;
+            text-align: center;
             padding: 10px;
-            font-size: 14px;
+            font-size: clamp(12px, 3vw, 14px);
             border-radius: 10px;
         }}
+
     </style>
+
     <div class="header-container">
         <img src="{logo_url1}" class="header-logo">
         <h1>Employee Engagement Survey</h1>
