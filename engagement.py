@@ -5,53 +5,40 @@ import pandas as pd
 # Dibuat per halaman dengan pertanyaan acak
 def main():
     logo_url = "https://www.agungtoyota.co.id/app/sam/assets/addons/sam/sam/samcgi-theme/resources/img/favicons/apple-touch-icon.png?v=1740058172"
-    st.set_page_config(page_title="Employee Engagement Survey", page_icon=logo_url, layout="centered")
+    st.set_page_config(page_title="Employee Engagement Survey", page_icon=logo_url, layout="wide")
     logo_url2 = "https://www.agungtoyota.co.id/app/sam/assets/logo/logo-baru-1.png"
     logo_url1 = "https://agungconcern.co.id/wp-content/uploads/2024/08/Logo-Agung-Concern-2024.svg"
 # Tambahkan CSS untuk tampilan yang lebih rapi
     st.markdown(
     f"""
     <style>
-        /* Header dengan responsive layout */
+        /* Default: Tampilan Laptop / Desktop */
         .header-container {{
             display: flex;
-            flex-wrap: wrap; /* Agar rapi di mobile */
-            justify-content: center;
+            justify-content: space-between;
             align-items: center;
-            padding: 10px 20px; /* Lebih fleksibel */
+            padding: 10px 50px;
             background-color: rgba(240, 240, 255, 0.6);
             border-radius: 10px;
             text-align: center;
         }}
-        
+
         .header-logo {{
-            width: 120px; /* Ukuran default */
-            max-width: 40%; /* Biar responsif */
+            width: 150px;
+            max-width: 20%;
             height: auto;
-            margin: 5px 10px; /* Beri jarak */
         }}
 
         h1 {{
-            font-size: clamp(24px, 5vw, 40px) !important;
+            font-size: 40px !important;
             text-align: center;
-            color: black !important;
-        }}
-
-        h2 {{
-            font-size: clamp(20px, 4.5vw, 34px) !important;
-            text-align: center;
-            color: black !important;
-        }}
-
-        p, label {{
-            font-size: clamp(16px, 4vw, 20px) !important;
             color: black !important;
         }}
 
         .stButton button {{
             width: 100%;
-            font-size: clamp(16px, 3vw, 20px) !important;
-            padding: 12px;
+            font-size: 22px !important;
+            padding: 10px;
             background: linear-gradient(to bottom, #d8bfff, #a0c4ff);
             color: black;
             border-radius: 12px;
@@ -60,28 +47,44 @@ def main():
             transition: all 0.2s ease-in-out;
         }}
 
-        .stButton button:hover {{
-            background: linear-gradient(to bottom, #a0c4ff, #d8bfff);
-            box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.2);
-            transform: translateY(-2px);
-        }}
-
-        .stButton button:active {{
-            box-shadow: 1px 1px 4px rgba(0, 0, 0, 0.1);
-            transform: translateY(2px);
-        }}
-
-        /* Footer Responsif */
+        /* Footer */
         .footer-container {{
-            position: relative; /* Agar tetap rapi di mobile */
+            position: relative;
             width: 100%;
             background-color: rgba(240, 240, 255, 0.6);
             text-align: center;
             padding: 10px;
-            font-size: clamp(12px, 3vw, 14px);
+            font-size: 14px;
             border-radius: 10px;
         }}
 
+        /* MODE MOBILE */
+        @media screen and (max-width: 768px) {{
+            .header-container {{
+                flex-direction: column; /* Elemen turun ke bawah */
+                padding: 10px 20px; /* Padding lebih kecil */
+            }}
+
+            .header-logo {{
+                width: 100px; /* Logo lebih kecil */
+                max-width: 40%; /* Agar tetap proporsional */
+                margin-bottom: 5px;
+            }}
+
+            h1 {{
+                font-size: 28px !important; /* Ukuran lebih kecil di HP */
+            }}
+
+            .stButton button {{
+                font-size: 18px !important; /* Tombol lebih kecil */
+                padding: 15px;
+            }}
+
+            .footer-container {{
+                font-size: 12px; /* Ukuran teks lebih kecil */
+                padding: 8px;
+            }}
+        }}
     </style>
 
     <div class="header-container">
@@ -163,11 +166,10 @@ def main():
             - Tidak ada jawaban benar/salah dan tidak mempengaruhi evaluasi kinerja 📊
             - Seluruh kuesioner harus diisi dan dilengkapi ✍️
             - Seluruh hasil pengisian survei akan langsung diterima, disimpan, dan diolah oleh tim HC Agung Toyota 📂
-            - Setelah mengisi survei, dimohon untuk mengisi Form Absensi melalui link yang tersedia di pemberitahuan survei. 📑
             
             **Selamat mengisi survei,**
             
-            **Tim HRD Agung Toyota**
+            **Tim Human Capital Agung Toyota**
         """)
 
         if st.button("🚀 Mulai"):
